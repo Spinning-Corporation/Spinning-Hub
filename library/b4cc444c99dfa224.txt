@@ -1,62 +1,103 @@
-local isAnimating = false -- Variável para controlar a animação
-local screenGui  -- Armazena a GUI para ser destruída depois
-local animationThread -- Armazena a thread da animação
-local Functions = {} -- Tabela para armazenar funções
+local isAnimating = false
+local screenGui
+local animationThread
+local Functions = {}
+local TweenService = game:GetService("TweenService")
+
+local function tween(obj, props, duration)
+    local tweenInfo = TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(obj, tweenInfo, props)
+    tween:Play()
+    return tween
+end
 
 local function createScreenGui()
     local player = game.Players.LocalPlayer
     local playerGui = player:WaitForChild("PlayerGui")
 
     local gui = Instance.new("ScreenGui")
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
     gui.Parent = playerGui
     return gui
 end
 
 local function createAnimatedGif(parent)
-    local gif = Instance.new("ImageLabel")
-    gif.Size = UDim2.new(0, 200, 0, 200) -- Tamanho fixo de 200x200
-    gif.Position = UDim2.new(0.5, -100, 0.5, -100) -- Centraliza corretamente
-    gif.BackgroundTransparency = 1
-    gif.Parent = parent
+    -- Fundo escurecido
+    local background = Instance.new("Frame")
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.BackgroundColor3 = Color3.new(0, 0, 0)
+    background.BackgroundTransparency = 1
+    background.ZIndex = 0
+    background.Parent = parent
 
-    local frames = { -- IDs das imagens de cada frame do GIF
+    local image1 = Instance.new("ImageLabel")
+    local image2 = Instance.new("ImageLabel")
+
+    for _, img in {image1, image2} do
+        img.Size = UDim2.new(0, 200, 0, 200)
+        img.Position = UDim2.new(0.5, -100, 0.5, -100)
+        img.BackgroundTransparency = 1
+        img.ImageTransparency = 1
+        img.ScaleType = Enum.ScaleType.Fit
+        img.ZIndex = 1
+        img.Parent = parent
+    end
+
+    local frames = {
         "rbxassetid://82742344232916",
         "rbxassetid://115879839538103",
         "rbxassetid://73901297094834",
         "rbxassetid://121552141717974",
     }
 
-    isAnimating = true -- Marca a animação como ativa
+    -- Efeito fade-in inicial
+    tween(background, {BackgroundTransparency = 0.4}, 0.4)
+    tween(image1, {ImageTransparency = 0}, 0.4)
+    image1.Image = frames[1]
 
-    animationThread = task.spawn(function() -- Inicia a animação em uma thread separada
-        local frameIndex = 1
+    isAnimating = true
+    local current = 2
+    local frontImage = image2
+    local backImage = image1
+
+    animationThread = task.spawn(function()
         while isAnimating do
-            gif.Image = frames[frameIndex]
-            frameIndex = (frameIndex % #frames) + 1
-            task.wait(0.1) -- Tempo entre os frames
+            frontImage.Image = frames[current]
+            frontImage.ImageTransparency = 1
+
+            tween(frontImage, {ImageTransparency = 0}, 0.2)
+            tween(backImage, {ImageTransparency = 1}, 0.2)
+
+            frontImage, backImage = backImage, frontImage
+            current = (current % #frames) + 1
+
+            task.wait(0.2)
         end
     end)
-
-    return gif
 end
 
 function Functions.StartAnimation()
-    if isAnimating then return end -- Evita múltiplas execuções
+    if isAnimating then return end
 
     screenGui = createScreenGui()
     createAnimatedGif(screenGui)
-    wait(3)
 end
 
 function Functions.StopAnimation()
-    isAnimating = false -- Para o loop da animação
+    isAnimating = false
 
     if animationThread then
-        task.cancel(animationThread) -- Cancela a execução da animação
+        task.cancel(animationThread)
     end
 
     if screenGui then
-        screenGui:Destroy() -- Remove a GUI da tela
+        for _, child in pairs(screenGui:GetChildren()) do
+            if child:IsA("GuiObject") then
+                tween(child, { BackgroundTransparency = 1}, 0.3)
+            end
+        end
+        screenGui:Destroy()
         screenGui = nil
     end
 end
