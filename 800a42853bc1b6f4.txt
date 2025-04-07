@@ -59,12 +59,12 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 	return if success then result else nil
 end
 
-local requestsDisabled = getgenv and getgenv().DISABLE_RAYFIELD_REQUESTS
 local InterfaceBuild = '3K3W'
 local Release = "Build 1.672"
 local RayfieldFolder = "Rayfield"
 local ConfigurationFolder = RayfieldFolder.."/Configurations"
 local ConfigurationExtension = ".rfld"
+
 local settingsTable = {
 	General = {
 		-- if needs be in order just make getSetting(name)
@@ -157,61 +157,6 @@ if debugX then
 	warn('Settings Loaded')
 end
 
---if not cachedSettings or not cachedSettings.System or not cachedSettings.System.usageAnalytics then
---	local fileFunctionsAvailable = isfile and writefile and readfile
-
---	if not fileFunctionsAvailable and not useStudio then
---		warn('Rayfield Interface Suite | Sirius Analytics:\n\n\nAs you don\'t have file functionality with your executor, we are unable to save whether you want to opt in or out to analytics.\nIf you do not want to take part in anonymised usage statistics, let us know in our Discord at sirius.menu/discord and we will manually opt you out.')
---		analytics = true	
---	else
---		prompt.create(
---			'Help us improve',
---	            [[Would you like to allow Sirius to collect usage statistics?
-
---<font transparency='0.4'>No data is linked to you or your personal activity.</font>]],
---			'Continue',
---			'Cancel',
---			function(result)
---				settingsTable.System.usageAnalytics.Value = result
---				analytics = result
---			end
---		)
---	end
-
---	repeat task.wait() until analytics ~= nil
---end
-
-if not requestsDisabled then
-	if debugX then
-		warn('Querying Settings for Reporter Information')
-	end
-	local function sendReport()
-		if useStudio then
-			print('Sending Analytics')
-		else
-			if debugX then warn('Reporting Analytics') end
-			task.spawn(function()
-				local success, reporter = pcall(function()
-					return loadstring(game:HttpGet("https://analytics.sirius.menu/v1/reporter", true))()
-				end)
-				if success and reporter then
-					pcall(function()
-						reporter.report("Rayfield", Release, InterfaceBuild)
-					end)
-				else
-					warn("Failed to load or execute the reporter. \nPlease notify Rayfield developers at sirius.menu/discord.")
-				end
-			end)
-			if debugX then warn('Finished Report') end
-		end
-	end
-	if cachedSettings and (#cachedSettings == 0 or (cachedSettings.System and cachedSettings.System.usageAnalytics and cachedSettings.System.usageAnalytics.Value)) then
-		sendReport()
-	elseif not cachedSettings then
-		sendReport()
-	end
-end
-
 if debugX then
 	warn('Moving on to continue initialisation')
 end
@@ -290,20 +235,6 @@ repeat
 
     correctBuild = false
 
-    if not warned then
-        warn('Rayfield | Build Mismatch')
-        
-        local buildValue = "No Build"
-        local buildObject = Rayfield:FindFirstChild('Build')
-        
-        if buildObject and buildObject:IsA("ValueBase") then
-            buildValue = buildObject.Value
-        end
-
-        print('Rayfield may encounter issues as you are running an incompatible interface version ('.. buildValue ..').\n\nThis version of Rayfield is intended for interface build '..InterfaceBuild..'.')
-        warned = true
-    end
-
     toDestroy, Rayfield = Rayfield, game:GetObjects("rbxassetid://10804731440")[1]
     
     if toDestroy and not useStudio then
@@ -312,10 +243,16 @@ repeat
 
     buildAttempts = buildAttempts + 1
 
-    task.wait(1)
-until buildAttempts >= 2
+    task.wait(5)
+until buildAttempts >= 5
 
 Rayfield.Enabled = false
+
+
+
+if debugX then
+	warn('Loading CoreGui')
+end
 
 if gethui then
 	Rayfield.Parent = gethui()
@@ -327,6 +264,11 @@ elseif not useStudio and CoreGui:FindFirstChild("RobloxGui") then
 elseif not useStudio then
 	Rayfield.Parent = CoreGui
 end
+
+if debugX then
+	warn('Loaded CoreGui')
+end
+
 
 if gethui then
 	for _, Interface in ipairs(gethui():GetChildren()) do
@@ -359,6 +301,10 @@ end
 
 -- Object Variables
 
+if debugX then
+	warn('Loading Variables')
+end
+
 local Main = Rayfield.Main
 local MPrompt = Rayfield:FindFirstChild('Prompt')
 local Topbar = Main.Topbar
@@ -369,6 +315,12 @@ local dragBar = Rayfield:FindFirstChild('Drag')
 local dragInteract = dragBar and dragBar.Interact or nil
 local dragBarCosmetic = dragBar and dragBar.Drag or nil
 local originalPosition = Topbar.ChangeSize.Position
+
+
+if debugX then
+	warn('Variables Loaded')
+end
+
 
 local dragOffset = 255
 local dragOffsetMobile = 150
@@ -619,22 +571,6 @@ local function SaveConfiguration()
 				Data[i] = v.CurrentValue or v.CurrentKeybind or v.CurrentOption or v.Color
 			end
 		end
-	end
-
-	if useStudio then
-		if script.Parent:FindFirstChild('configuration') then script.Parent.configuration:Destroy() end
-
-		local ScreenGui = Instance.new("ScreenGui")
-		ScreenGui.Parent = script.Parent
-		ScreenGui.Name = 'configuration'
-
-		local TextBox = Instance.new("TextBox")
-		TextBox.Parent = ScreenGui
-		TextBox.Size = UDim2.new(0, 800, 0, 50)
-		TextBox.AnchorPoint = Vector2.new(0.5, 0)
-		TextBox.Position = UDim2.new(0.5, 0, 0, 30)
-		TextBox.Text = HttpService:JSONEncode(Data)
-		TextBox.ClearTextOnFocus = false
 	end
 
 	if debugX then
@@ -1282,6 +1218,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 
 	Main.Shadow.Image.ImageTransparency = 1
 
+	print('Loading Icons')
 	if Settings.Icon and Settings.Icon ~= 0 and Topbar:FindFirstChild('Icon') then
 		Topbar.Icon.Visible = true
 		Topbar.Title.Position = UDim2.new(0, 47, 0.5, 0)
@@ -1301,7 +1238,8 @@ function RayfieldLibrary:CreateWindow(Settings)
 			Topbar.Icon.Image = "rbxassetid://" .. 0
 		end
 	end
-
+	print('Icons Loaded')
+	
 	if dragBar then
 		dragBar.Visible = false
 		dragBarCosmetic.BackgroundTransparency = 1
