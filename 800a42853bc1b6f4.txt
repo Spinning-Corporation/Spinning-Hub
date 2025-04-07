@@ -214,40 +214,45 @@ local TweenService = getService("TweenService")
 local Players = getService("Players")
 local CoreGui = getService("CoreGui")
 
-
 -- Interface Management
 local Rayfield = game:GetObjects("rbxassetid://10804731440")[1]
-local buildAttempts = 0
-local correctBuild = false
 local warned
 local globalLoaded
 
-repeat
-    local success, result = pcall(function()
-        if Rayfield:FindFirstChild('Build') and Rayfield.Build.Value == InterfaceBuild then
-            correctBuild = true
-            return true 
-        end
-        return false
-    end)
+local buildAttempts = 0
+local correctBuild = false
+local toDestroy
 
-    if success and result then break end
+while buildAttempts < 5 do
+    if Rayfield and Rayfield:FindFirstChild('Build') then
+        local success, result = pcall(function()
+            return Rayfield.Build.Value == InterfaceBuild
+        end)
+
+        if success and result then
+            correctBuild = true
+            break
+        end
+    end
 
     correctBuild = false
 
-    toDestroy, Rayfield = Rayfield, game:GetObjects("rbxassetid://10804731440")[1]
-    
+    toDestroy = Rayfield
+    local objects = game:GetObjects("rbxassetid://10804731440")
+    Rayfield = objects and objects[1]
+
     if toDestroy and not useStudio then
         pcall(function() toDestroy:Destroy() end)
     end
 
     buildAttempts = buildAttempts + 1
-
     task.wait(5)
-until buildAttempts >= 5
+end
 
-Rayfield.Enabled = false
-
+-- Verifica se Rayfield existe antes de tentar ativá-lo
+if Rayfield then
+    Rayfield.Enabled = false
+end
 
 
 if debugX then
@@ -1239,7 +1244,7 @@ function RayfieldLibrary:CreateWindow(Settings)
 		end
 	end
 	print('Icons Loaded')
-	
+
 	if dragBar then
 		dragBar.Visible = false
 		dragBarCosmetic.BackgroundTransparency = 1
