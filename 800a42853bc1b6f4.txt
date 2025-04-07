@@ -224,36 +224,38 @@ local correctBuild = false
 local toDestroy
 
 while buildAttempts < 5 do
-    if Rayfield and Rayfield:FindFirstChild('Build') then
-        local success, result = pcall(function()
-            return Rayfield.Build.Value == InterfaceBuild
-        end)
+    if typeof(Rayfield) == "Instance" then
+        local build = Rayfield:FindFirstChild("Build")
 
-        if success and result then
-            correctBuild = true
-            break
+        if build and build:IsA("ValueBase") then
+            local success, result = pcall(function()
+                return build.Value == InterfaceBuild
+            end)
+
+            if success and result then
+                correctBuild = true
+                break
+            end
         end
     end
 
     correctBuild = false
 
     toDestroy = Rayfield
-    local objects = game:GetObjects("rbxassetid://10804731440")
-    Rayfield = objects and objects[1]
+    local nextObjects = game:GetObjects("rbxassetid://10804731440")
+    Rayfield = nextObjects and nextObjects[1]
 
     if toDestroy and not useStudio then
         pcall(function() toDestroy:Destroy() end)
     end
 
-    buildAttempts = buildAttempts + 1
+    buildAttempts += 1
     task.wait(5)
 end
 
--- Verifica se Rayfield existe antes de tentar ativá-lo
-if Rayfield then
+if typeof(Rayfield) == "Instance" then
     Rayfield.Enabled = false
 end
-
 
 if debugX then
 	warn('Loading CoreGui')
@@ -273,7 +275,6 @@ end
 if debugX then
 	warn('Loaded CoreGui')
 end
-
 
 if gethui then
 	for _, Interface in ipairs(gethui():GetChildren()) do
